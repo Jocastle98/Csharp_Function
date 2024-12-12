@@ -14,7 +14,10 @@ public class RangeRestriction : MonoBehaviour
     
     void Update()
     {
+
+        
         //큐브오브젝트 범위 내에서 나갈 수 없도록 범위 제한
+        //Mathf.Clamp는 (제한하려는 값, 허용 가능한 최소 값, 허용가능한 최대값)
         transform.position = new Vector3(
             Mathf.Clamp(transform.position.x,
                 boxCollider.bounds.min.x,
