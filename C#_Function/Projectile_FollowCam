@@ -1,73 +1,45 @@
-두개의 스크립트가 서로를 참조를 한다.
-------------------------------
-using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
-using UnityEngine.UI;
-
-public class Cannon : MonoBehaviour
-{
-    public Camera cam;
-
-
-    void Update()
-    {
-
-        if (Input.GetKeyUp(KeyCode.Space))
-        {
-
-
-            // 발사체 카메라 참조
-            Camera followCam = cannonBallInstance.GetComponentInChildren<Camera>();
-
-            // Projectile 스크립트를 가져와 참조 셋팅
-            Projectile projectile = cannonBallInstance.GetComponent<Projectile>();
-            if (projectile != null)
-            {
-                projectile.followCam = followCam;
-                projectile.mainCam = cam;
-            }
-
-            // 메인 카메라 끄고 발사체 카메라 켜기
-            cam.gameObject.SetActive(false);
-            followCam.gameObject.SetActive(true);
-
-            // 발사체 3초 후 파괴(땅에 닿기 전에 파괴되는 경우 대비)
-            Destroy(cannonBallInstance, 3f);
-
-            // 파워 초기화
-            currentPower = 0f;
-            slider.value = 0f;
-        }
-    }
-}
------------------
-
-using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
-using Random = UnityEngine.Random;
-
+해당 코드는 발사체에대한 스크립트로 발사를 하면 메인 카메라를 비활성화하며 followCam을 활성화 한다.
 public class Projectile : MonoBehaviour
 {
-
-    // Cannon 스크립트에서 참조를 받아올 카메라들
-    public Camera followCam;
-    public Camera mainCam;
-
-    private void OnTriggerEnter(Collider other)
+    public Camera _followCam;  // 발사체의 자식 카메라
+    public Camera _mainCam;    // 메인 카메라
+    
+    public void Launch()
     {
-        // 땅에 닿았다면
-        if (other.CompareTag("Ground"))
+        if (_followCam != null && _mainCam != null)
         {
-
-
-            // 발사체 카메라 끄고 메인 카메라 켜기
-            if (followCam != null) followCam.gameObject.SetActive(false);
-            if (mainCam != null) mainCam.gameObject.SetActive(true);
-
-            // 발사체 파괴
-            Destroy(this.gameObject);
+            _mainCam.enabled = false;          // 메인 카메라 비활성화
+            _followCam.gameObject.SetActive(true); // 자식 카메라 활성화
         }
     }
+
+    void OnCollisionEnter(Collision collision)
+    {
+        if (_followCam != null && _mainCam != null)
+        {
+            _followCam.gameObject.SetActive(false); // 자식 카메라 비활성화
+            _mainCam.enabled = true;               // 메인 카메라 활성화
+        }
+        
+    }
 }
+발사체 생성하여 힘을 가할 때, 발사체 스크립트에서의 컴포넌트를 가져와 함수를 실행시킨다.
+public class DraggableObject : MonoBehaviour, IPointerDownHandler,  IPointerUpHandler,   IDragHandler          
+{ 
+    public void OnPointerUp(PointerEventData eventData)
+    {
+        // 발사체 생성 및 발사
+        GameObject projectile = Instantiate(MetalPrefab, start, Quaternion.identity);
+        Rigidbody rb = projectile.GetComponent<Rigidbody>();
+        if (rb != null)
+        {
+            Vector3 force = powerDirection.normalized * speed * powerDirection.magnitude;
+            rb.AddForce(force, ForceMode.Impulse);
+        }
+        // 카메라 발사체 따라가기 
+        Projectile projectileScript = projectile.GetComponent<Projectile>();
+        projectileScript.Launch();
+        
+    }
+}
+
