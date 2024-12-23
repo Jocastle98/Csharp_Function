@@ -1,0 +1,54 @@
+충격량에 따라 머테리얼을 변형하여
+충돌한 물체의 상태를 변화시키는 코드
+
+
+public class Obstacle : MonoBehaviour
+{
+    [SerializeField] private float hp = 18f;                
+    [SerializeField] private Material normalMaterial;       // 정상 상태의 Material
+    [SerializeField] private Material badMaterial; // 상태가 나쁠 때의 Material
+    private MeshRenderer _renderer;                  
+    private Rigidbody rb;
+
+    void Start()
+    {
+        rb = GetComponent<Rigidbody>();
+        _renderer = GetComponent<MeshRenderer>();
+        _renderer.material = normalMaterial; 
+        
+    }
+
+    private void OnCollisionEnter(Collision collision)
+    {
+        // 충격량 계산
+        float impactForce = collision.relativeVelocity.magnitude * (collision.rigidbody?.mass ?? 1f);
+
+        // 충격량을 체력에서 차감
+        hp -= impactForce;
+
+        // 상태에 따른 Material 변경
+        UpdateMaterial();
+
+        // 체력이 0 이하가 되면 파괴
+        if (hp <= 0)
+        {
+            Destroy(gameObject);
+        }
+    }
+
+    private void UpdateMaterial()
+    {
+        if (_renderer == null) return;
+
+        if (hp > 10)
+        {
+            _renderer.material = normalMaterial; // 정상 상태
+        }
+        else if (hp > 0 && hp <= 10)
+        {
+            _renderer.material = badMaterial; // 상태가 나쁨
+        }
+
+    }
+    
+}
