@@ -21,8 +21,17 @@ public class Obstacle : MonoBehaviour
     private void OnCollisionEnter(Collision collision)
     {
         // 충격량 계산
-        float impactForce = collision.relativeVelocity.magnitude * (collision.rigidbody?.mass ?? 1f);
-
+        //충돌한 두 물체 사이의 상대 속도(collision.relativeVelocity.magnitude)와
+        //충돌 물체의 질량(collision.rigidbody.mass)을 곱하여 충격량(힘)을 계산
+        float impactForce;
+        if (collision.rigidbody != null)
+        {
+            impactForce = collision.relativeVelocity.magnitude * collision.rigidbody.mass;
+        }
+        else
+        {
+            impactForce = collision.relativeVelocity.magnitude * 1f; // Rigidbody가 없을 때 기본 질량 1 사용
+        }
         // 충격량을 체력에서 차감
         hp -= impactForce;
 
