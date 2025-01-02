@@ -4,13 +4,13 @@ Character 초기화:
 StateMachine 객체를 생성하고 IdleState로 초기화.
 Unity의 Update 메서드에서 매 프레임 UpdateState 호출.
 Idle 상태:
-
 점프 키를 누르면 JumpState로 전환.
 이동 입력이 있으면 WalkState로 전환.
+  
 Walk 상태:
-
 점프 키를 누르면 JumpState로 전환.
 이동 입력이 없으면 IdleState로 전환.
+  
 Jump 상태:착지하면 IdleState로 전환.
 
   
