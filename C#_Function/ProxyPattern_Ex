@@ -1,0 +1,90 @@
+using UnityEngine;
+using Cysharp.Threading.Tasks;
+using System.Threading;
+
+// 캐릭터 행동을 정의하는 인터페이스
+public interface ICharacterAction
+{
+    void PerformAction(GameObject character);  // 각 행동에 따라 캐릭터가 수행할 동작을 정의
+}
+
+// 점프 액션 클래스 (애니메이션 포함)
+public class JumpAction : ICharacterAction
+{
+    public void PerformAction(GameObject character)
+    {
+        Debug.Log("점프 중!");
+        Animator animator = character.GetComponent<Animator>();
+        animator.SetTrigger("Jump"); // 점프 애니메이션 재생
+    }
+}
+
+// 달리기 액션 클래스 (Speed 파라미터 사용)
+public class RunAction : ICharacterAction
+{
+    public void PerformAction(GameObject character)
+    {
+        Debug.Log("달리기 중!");
+        Animator animator = character.GetComponent<Animator>();
+        animator.SetFloat("Speed", 1.0f); // Speed 값을 1.0f로 설정하여 달리기 애니메이션 재생
+    }
+}
+
+// 점프 후 달리기 액션 (비동기 작업과 애니메이션 사용)
+public class JumpThenRunAction : ICharacterAction
+{
+    public async void PerformAction(GameObject character)
+    {
+        Debug.Log("점프 먼저 수행!");
+        Animator animator = character.GetComponent<Animator>();
+        animator.SetTrigger("Jump");
+        await UniTask.Delay(3000);  // 3초 후
+        Debug.Log("3초 후 달리기 시작!");
+        animator.SetFloat("Speed", 1.0f); // Speed 값을 1.0f로 설정하여 달리기 애니메이션 재생
+    }
+}
+
+// 프록시 클래스: 액션을 대리 수행
+public class CharacterProxy
+{
+    private ICharacterAction action; // 현재 캐릭터의 행동을 저장하는 변수
+
+    // 프록시 생성자: 특정 행동을 전달받아 설정
+    public CharacterProxy(ICharacterAction action)
+    {
+        this.action = action;
+    }
+
+    // 행동을 변경하는 메서드
+    public void SetAction(ICharacterAction newAction)
+    {
+        action = newAction;
+    }
+
+    // 설정된 행동을 수행하는 메서드
+    public void PerformAction(GameObject character)
+    {
+        action.PerformAction(character); // 현재 설정된 행동을 실행
+    }
+}
+
+// 프록시 패턴 사용 예제 (Unity MonoBehaviour 사용)
+public class ProxyPatternExample : MonoBehaviour
+{
+    public GameObject character1;  // 첫 번째 캐릭터
+    public GameObject character2;  // 두 번째 캐릭터
+    public GameObject character3;  // 세 번째 캐릭터
+
+    private void Start()
+    {
+        // 각 캐릭터에 대한 프록시 객체 생성 및 설정
+        CharacterProxy proxy1 = new CharacterProxy(new JumpAction());
+        CharacterProxy proxy2 = new CharacterProxy(new RunAction());
+        CharacterProxy proxy3 = new CharacterProxy(new JumpThenRunAction());
+
+        // 각 프록시를 이용하여 캐릭터의 행동 수행
+        proxy1.PerformAction(character1); // 첫 번째 캐릭터: 점프
+        proxy2.PerformAction(character2); // 두 번째 캐릭터: 달리기
+        proxy3.PerformAction(character3); // 세 번째 캐릭터: 점프 후 3초 후 달리기
+    }
+}
