@@ -1,0 +1,216 @@
+이 코드 자체로 FSM 기반 몬스터 AI를 사용할 수 있습니다. 그러나 아래의 추가 요소가 필요할 수 있습니다:
+
+JSON 파일:
+Resources 폴더에 JSON 파일(fsmType)을 저장해야 합니다.
+애니메이션 설정:
+Animator가 필요하며, "Idle", "Walk", "Attack" 애니메이션 클립을 Unity에서 설정해야 합니다.
+플레이어 감지:
+target은 Transform 타입이므로, 플레이어 태그와 감지 로직을 Unity 내에서 추가해야 합니다.
+
+----------
+
+
+using System;
+using System.Collections;
+using System.Collections.Generic;
+using System.Reflection;
+using UnityEngine;
+
+// 전이 조건을 정의하는 클래스 (상태 간 전환을 위해 사용)
+[Serializable]
+public class TransitionCodition
+{
+    public string fromStata; // 전환 전 상태 이름
+    public string toStata;   // 전환 후 상태 이름
+    public string conditionMethod; // 전이 조건 검사 메서드 이름
+}
+
+// FSM 설정을 정의하는 클래스 (JSON 직렬화 가능)
+[Serializable]
+public class FSMCofiguration
+{
+    public string initialState;            // 초기 상태 이름
+    public List<string> states;            // 사용 가능한 모든 상태 목록
+    public List<TransitionCodition> transitions;  // 전이 조건 리스트
+}
+
+// 모든 상태의 기본 클래스 (추상화된 상태 구현)
+public abstract class StateBase
+{
+    protected FSMSystem fsm;               // FSM 시스템 참조
+    protected MonsterController monster;   // 몬스터 컨트롤러 참조
+
+    public virtual void OnEnter() { }      // 상태 진입 시 실행되는 메서드
+    public virtual void OnExit() { }       // 상태 종료 시 실행되는 메서드
+    public virtual void OnUpdate() { }     // 상태 지속 시 실행되는 메서드
+
+    // 상태를 초기화하는 메서드 (FSM과 몬스터 객체 전달)
+    public void Initialize(FSMSystem _fsm, MonsterController _monster)
+    {
+        fsm = _fsm;
+        monster = _monster;
+    }
+}
+
+// Idle (대기) 상태 구현
+public class IdleState_New : StateBase
+{
+    public override void OnUpdate()
+    {
+        Debug.Log("IdleState_New"); // 현재 상태를 디버그 출력
+    }
+}
+
+// Chase (추격) 상태 구현
+public class ChaseState_New : StateBase
+{
+    public override void OnUpdate()
+    {
+        monster.MoveToTarget(); // 몬스터를 타겟 방향으로 이동
+    }
+}
+
+// Attack (공격) 상태 구현
+public class AttackState_New : StateBase
+{
+    public override void OnEnter()
+    {
+        base.OnEnter();
+        monster.AttackToTarget(); // 타겟을 공격하는 메서드 실행
+    }
+}
+
+// FSM 시스템 클래스 (상태를 관리하고 전환 처리)
+public class FSMSystem : MonoBehaviour
+{
+    private Dictionary<string, StateBase> states = new(); // 상태 저장소
+    private StateBase currentState;                       // 현재 상태
+    private FSMCofiguration cofiguration;                // FSM 설정 정보
+    private MonsterController monster;                   // 몬스터 컨트롤러 참조
+
+    private void Update()
+    {
+        if (currentState != null)
+        {
+            currentState.OnUpdate();   // 현재 상태의 OnUpdate 호출
+            CheckTransitions();         // 상태 전이 조건 검사
+        }
+    }
+
+    // FSM 초기화 (JSON 파일을 로드하여 설정 적용)
+    public void Initialize(string configName, MonsterController monster)
+    {
+        TextAsset loadedText = Resources.Load<TextAsset>(configName);
+        FSMCofiguration configuration = JsonUtility.FromJson<FSMCofiguration>(loadedText.text);
+
+        foreach (string stateName in configuration.states)
+        {
+            Type stateType = Type.GetType(stateName);
+            StateBase state = Activator.CreateInstance(stateType) as StateBase;
+            state.Initialize(this, monster);
+            states[stateName] = state;
+            this.monster = monster;
+        }
+        ChangeState(configuration.initialState);
+    }
+
+    // 전이 조건 검사 및 상태 전환
+    private void CheckTransitions()
+    {
+        foreach (var transition in cofiguration.transitions)
+        {
+            if (transition.fromStata == currentState.GetType().Name)
+            {
+                if (CheckCondition(transition.conditionMethod))
+                {
+                    ChangeState(transition.toStata);
+                    break;
+                }
+            }
+        }
+    }
+
+    // 전이 조건 검사 메서드 호출
+    private bool CheckCondition(string methodName)
+    {
+        MethodInfo methodInfo = monster.GetType().GetMethod(methodName, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+        return methodInfo != null && (bool)methodInfo.Invoke(monster, null);
+    }
+
+    // 상태 변경 메서드
+    private void ChangeState(string newStateName)
+    {
+        if (currentState != null)
+        {
+            currentState.OnExit(); // 이전 상태 종료
+        }
+
+        if (states.TryGetValue(newStateName, out StateBase state))
+        {
+            currentState = state;
+            currentState.OnEnter(); // 새로운 상태 진입
+        }
+    }
+
+    public string GetCurrentStateName()
+    {
+        return currentState?.GetType().Name ?? string.Empty;
+    }
+}
+
+// 몬스터 컨트롤러
+[RequireComponent(typeof(FSMSystem))]
+public class MonsterController : MonoBehaviour
+{
+    public string fsmType = "";
+    private FSMSystem fsmSystem;
+
+    [SerializeField] private float detectionRange = 10f;
+    [SerializeField] private float attackRange = 2f;
+    [SerializeField] private float maxHp = 100f;
+    [SerializeField] private float chaseSpeed = 5f;
+
+    Transform target;
+    private float currentHp;
+    private bool bAttacked = false;
+
+    void Start()
+    {
+        currentHp = maxHp;
+        fsmSystem = GetComponent<FSMSystem>();
+        fsmSystem.Initialize(fsmType, this);
+    }
+
+    // 타겟 감지
+    public bool IsDetectedTarget()
+    {
+        return target != null && (transform.position - target.position).sqrMagnitude <= detectionRange * detectionRange;
+    }
+
+    // 공격 중인지 확인
+    public bool IsAttacking()
+    {
+        return bAttacked;
+    }
+
+    // 타겟 방향으로 이동
+    public void MoveToTarget()
+    {
+        transform.position = Vector3.MoveTowards(transform.position, target.position, chaseSpeed * Time.deltaTime);
+    }
+
+    // 타겟 공격
+    public void AttackToTarget()
+    {
+        Debug.Log("AttackToTarget");
+        StartCoroutine(FinishAttack());
+    }
+
+    // 공격 완료 처리
+    IEnumerator FinishAttack()
+    {
+        bAttacked = true;
+        yield return new WaitForSeconds(1f);
+        bAttacked = false;
+    }
+}
