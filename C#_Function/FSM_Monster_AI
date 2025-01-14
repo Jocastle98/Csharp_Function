@@ -170,7 +170,7 @@ public class MonsterController : MonoBehaviour
     [SerializeField] private float maxHp = 100f;
     [SerializeField] private float chaseSpeed = 5f;
 
-    Transform target;
+    public Transform target;
     private float currentHp;
     private bool bAttacked = false;
 
