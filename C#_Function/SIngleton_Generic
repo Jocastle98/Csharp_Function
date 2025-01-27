@@ -40,20 +40,17 @@ public class AudioManager : Singleton<AudioManager>
         base.Awake(); // 싱글톤 초기화 (Singleton<T>의 Awake 호출)
 
         // AudioSource 컴포넌트를 가져옴
-        audioSource = GetComponent<AudioSource>();
-        if (audioSource == null)
-        {
-            audioSource = gameObject.AddComponent<AudioSource>();
-        }
+        audioSource = GetComponent<AudioSource>() ?? gameObject.AddComponent<AudioSource>();
+
     }
 }
 
 
 ------------------
+
 public class Singleton<T> : MonoBehaviour where T : MonoBehaviour
 {
     private static T _instance;
-    private static object _lock = new object();
 
     public static T Instance
     {
@@ -61,15 +58,13 @@ public class Singleton<T> : MonoBehaviour where T : MonoBehaviour
         {
             if (_instance == null)
             {
-                lock (_lock)
+                _instance = FindObjectOfType<T>();
+
+                if (_instance == null)
                 {
-                    _instance = FindObjectOfType<T>();
-                    if (_instance == null)
-                    {
-                        GameObject singletonObject = new GameObject(typeof(T).Name);
-                        _instance = singletonObject.AddComponent<T>();
-                        DontDestroyOnLoad(singletonObject);
-                    }
+                    // 싱글톤 오브젝트 생성
+                    GameObject singletonObject = new GameObject(typeof(T).Name);
+                    _instance = singletonObject.AddComponent<T>();
                 }
             }
             return _instance;
@@ -81,11 +76,12 @@ public class Singleton<T> : MonoBehaviour where T : MonoBehaviour
         if (_instance == null)
         {
             _instance = this as T;
-            DontDestroyOnLoad(gameObject);
+            DontDestroyOnLoad(gameObject); // 씬 전환 시에도 유지
         }
-        else
+        else if (_instance != this)
         {
-            Destroy(gameObject);
+            Destroy(gameObject); // 중복 인스턴스 삭제
         }
     }
 }
+
