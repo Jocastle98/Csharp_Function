@@ -1,0 +1,91 @@
+해당 코드를 통해 다른 코드에서 사용하는 싱글톤패턴을 해당 코드에서 싱글톤을 사용하지 않고 해당 코드 역할에만 집중이 가능하도록 수정할 수 있습니다.
+
+public class AudioManager : MonoBehaviour
+{
+    // 싱글톤 인스턴스. AudioManager는 전역적으로 하나만 존재하도록 보장.
+    public static AudioManager Instance { get; private set; }
+    
+    // AudioSource 컴포넌트: 오디오 재생에 사용
+    private AudioSource audioSource;
+    
+    // 오디오 클립 배열: 다양한 상황에서 사용할 사운드 파일들
+    public AudioClip[] audioClip; 
+
+    private void Awake()
+    {
+        // 싱글톤 패턴 구현
+        if (Instance == null)
+        {
+            Instance = this; // 현재 오브젝트를 싱글톤 인스턴스로 설정
+            DontDestroyOnLoad(gameObject); // 씬 전환 시에도 오브젝트 유지
+        }
+        else
+        {
+            Destroy(gameObject); // 중복된 AudioManager 오브젝트가 생성되면 삭제
+        }
+    }
+}
+
+위 코드를 아래 코드로 변경할 수 있습니다.
+때문에 AudioManager에 경우에 자신의 역할에만 집중을 하면 되는 것을 알 수 있습니다.
+
+public class AudioManager : Singleton<AudioManager>
+{
+    private AudioSource audioSource;
+
+    public AudioClip[] audioClip;
+
+    protected override void Awake()
+    {
+        base.Awake(); // 싱글톤 초기화 (Singleton<T>의 Awake 호출)
+
+        // AudioSource 컴포넌트를 가져옴
+        audioSource = GetComponent<AudioSource>();
+        if (audioSource == null)
+        {
+            audioSource = gameObject.AddComponent<AudioSource>();
+        }
+    }
+}
+
+
+------------------
+public class Singleton<T> : MonoBehaviour where T : MonoBehaviour
+{
+    private static T _instance;
+    private static object _lock = new object();
+
+    public static T Instance
+    {
+        get
+        {
+            if (_instance == null)
+            {
+                lock (_lock)
+                {
+                    _instance = FindObjectOfType<T>();
+                    if (_instance == null)
+                    {
+                        GameObject singletonObject = new GameObject(typeof(T).Name);
+                        _instance = singletonObject.AddComponent<T>();
+                        DontDestroyOnLoad(singletonObject);
+                    }
+                }
+            }
+            return _instance;
+        }
+    }
+
+    protected virtual void Awake()
+    {
+        if (_instance == null)
+        {
+            _instance = this as T;
+            DontDestroyOnLoad(gameObject);
+        }
+        else
+        {
+            Destroy(gameObject);
+        }
+    }
+}
