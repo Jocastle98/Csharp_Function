@@ -1,4 +1,5 @@
 
+
 public class JocastleTimer : MonoBehaviour
 {
     [SerializeField] private Image fillImage;
@@ -11,6 +12,12 @@ public class JocastleTimer : MonoBehaviour
     public float CurrentImer{get; private set;}
     private bool _isPaused;
 
+    void Awake()
+    {
+        //타이머 멈춰있음
+        _isPaused = true;
+    }
+    
     void Update()
     {
         if (!_isPaused)
@@ -47,9 +54,13 @@ public class JocastleTimer : MonoBehaviour
         _isPaused = true;
     }
 
-    public void ResetTimer()
+    public void InitTimer()
     {
         CurrentImer = 0;
         fillImage.fillAmount = 1;
+        timeText.text = totalTime.ToString("F0");
+        headCapImage.gameObject.SetActive(true);
+        tailCapImage.gameObject.SetActive(true);
+        _isPaused = false;
     }
 }
