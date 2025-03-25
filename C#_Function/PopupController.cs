@@ -4,6 +4,62 @@ https://velog.io/@jocastle98/%EB%A9%8B%EC%9F%81%EC%9D%B4%EC%82%AC%EC%9E%90%EC%B2
 자세한 내용은 위 블로그 참조
 아래 MainPanelController는 버튼이 있는 경우 PopupPanel에 대해 생성하는 코드이고
 생성이 되었다면 PopupPanelController에 있는 동작에 대해 실행하게 됩니다.
+
+
+바로 아래것은 MonoBehavior대신 PopupController로 진행하면 좋을거같같아
+using System;
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+using DG.Tweening;
+
+[RequireComponent(typeof(CanvasGroup))]
+public class PopupPanelController : MonoBehaviour
+{
+    [SerializeField] private RectTransform panelRectTransform;  // 팝업될 Panel 자신의 RectTransform
+    
+    private CanvasGroup mBackgroundCanvasGroup;                 // Panel 뒤를 가릴 (검은)배경
+    
+    private void Awake()
+    {
+        mBackgroundCanvasGroup = GetComponent<CanvasGroup>();
+    }
+    
+    /// <summary>
+    /// Panel을 나타나게하는 메서드
+    /// </summary>
+    public virtual void Show()
+    {
+        // 보여지기 전 초기화
+        mBackgroundCanvasGroup.alpha = 0;
+        panelRectTransform.localScale = Vector3.zero;
+        
+        // 배경은 등속으로 등장, 패널은 튕기듯이 등장
+        mBackgroundCanvasGroup.DOFade(1, 0.3f).SetEase(Ease.Linear);
+        panelRectTransform.DOScale(1, 0.3f).SetEase(Ease.OutBack);
+    }
+
+    /// <summary>
+    /// Panel을 사라지게하는 메서드
+    /// </summary>
+    /// <param name="OnPanelControllerHide"></param>
+    public virtual void Hide(Action OnPanelControllerHide = null)
+    {
+        // 사라지기 전 초기화
+        mBackgroundCanvasGroup.alpha = 1;
+        panelRectTransform.localScale = Vector3.one;
+        
+        // 배경은 등속으로 퇴장, 패널은 빠르게 작아지다가 끝에서 살짝 당겨지듯 퇴장
+        mBackgroundCanvasGroup.DOFade(0, 0.3f).SetEase(Ease.Linear);
+        panelRectTransform.DOScale(0, 0.3f).SetEase(Ease.InBack).OnComplete(() =>
+        {
+            // 콜백이 있다면 실행 후 오브젝트 파괴
+            OnPanelControllerHide?.Invoke();
+            Destroy(gameObject);
+        });
+    }
+}
+    
 --------------
 public class MainPanelController : MonoBehaviour
 {
